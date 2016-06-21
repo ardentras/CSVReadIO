@@ -55,7 +55,10 @@ public class CSVReadIO extends JFrame{
 			while ((line = br.readLine()) != null) {
 				row = line.split(",", -1);
 				for (int i = 0; i < row.length; i++)
-					row[i] = row[i].substring(1, row[i].length() - 1);
+				{
+					if (row[i].length() > 0 && row[i].substring(0, 1).equals("\""))
+						row[i] = row[i].substring(1, row[i].length() - 1);
+				}
 				
 				model.addRow(row);
 			}
@@ -253,14 +256,7 @@ public class CSVReadIO extends JFrame{
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (CSVReadIO.this.getContentPane().getComponent(0).getName() != null && CSVReadIO.this.getContentPane().getComponent(0).getName().equals("iframe")) {
-					JInternalFrame iframe = (JInternalFrame) CSVReadIO.this.getContentPane().getComponent(0);
-					JTable iframeTable = (JTable) iframe.getContentPane().getComponent(0);
-					
-					TableColumnModel tcm = fileContents.getColumnModel();
-					for (int i = 0; i < fileContents.getColumnCount(); i++) {
-						tcm.getColumn(i).setHeaderValue(iframeTable.getValueAt(0, i));
-					}
-					fileContents.setColumnModel(tcm);
+					fileContents = updateTableModel(fileContents);
 					
 					writeFile(inputFile, false);
 					
@@ -285,14 +281,7 @@ public class CSVReadIO extends JFrame{
 					done.addActionListener(new ActionListener() {
 						@Override
 						public void actionPerformed(ActionEvent e) {
-							JInternalFrame iframe = (JInternalFrame) CSVReadIO.this.getContentPane().getComponent(0);
-							JTable iframeTable = (JTable) iframe.getContentPane().getComponent(0);
-							
-							TableColumnModel tcm = fileContents.getTableHeader().getColumnModel();
-							for (int i = 0; i < fileContents.getColumnCount(); i++) {
-								tcm.getColumn(i).setHeaderValue(iframeTable.getValueAt(0, i));
-							}
-							fileContents.getTableHeader().setColumnModel(tcm);
+							fileContents = updateTableModel(fileContents);
 							
 							writeFile(inputFile, false);
 							
@@ -325,6 +314,27 @@ public class CSVReadIO extends JFrame{
 		
 		
 		return menuBar;
+	}
+	
+	public JTable updateTableModel(JTable table) {
+		JInternalFrame iframe = (JInternalFrame) CSVReadIO.this.getContentPane().getComponent(0);
+		JTable iframeTable = (JTable) iframe.getContentPane().getComponent(0);
+		
+		Object[] headers = new Object[table.getColumnCount()];
+		for (int i = 0; i < table.getColumnCount(); i++) {
+			headers[i] = iframeTable.getValueAt(0, i);
+		}
+		DefaultTableModel newModel = new DefaultTableModel(headers, table.getRowCount());
+		
+		for (int i = 0; i < table.getRowCount(); i++) {
+			for (int j = 0; j < table.getColumnCount(); j++) {
+				newModel.setValueAt(table.getValueAt(i, j), i, j);
+			}
+		}
+		
+		table.setModel(newModel);
+		
+		return table;
 	}
 	
 	public void createFileAction(JFrame frame) {
@@ -376,8 +386,9 @@ public class CSVReadIO extends JFrame{
 	}
 	
 	public void saveAsAction(JFrame frame) {
-		JFileChooser fileChooser = new JFileChooser();
-		fileChooser.setCurrentDirectory(inputFile);
+		JFileChooser fileChooser = new JFileChooser(inputFile);
+		fileChooser.setDialogTitle("Save as...");
+		fileChooser.setApproveButtonText("Save");
 		
 		int returnVal = fileChooser.showOpenDialog(frame);
 		
@@ -389,7 +400,9 @@ public class CSVReadIO extends JFrame{
 	}
 	
 	public File checkFileExists(File inputFile) {
-		JFileChooser fileChooser = new JFileChooser();
+		JFileChooser fileChooser = new JFileChooser(inputFile);
+		fileChooser.setDialogTitle("Choose Another File");
+		fileChooser.setApproveButtonText("Choose");
 
 		while (!inputFile.exists()) {
 			Object[] options = { "Yes", "No" };
